@@ -1,103 +1,215 @@
-import Image from "next/image";
+"use client";
+import { useRef, useState } from "react";
+import colors from "@/lib/data.json";
+import gsap from "gsap";
+
+interface Color {
+  jsonId: string;
+  code: string;
+  name: string;
+  variant: string;
+  imageurl: string;
+  red: string; // if you can change your JSON, make these numbers
+  green: string;
+  blue: string;
+}
+
+const videoPathFromName = (name: string) =>
+  `/videos/${encodeURIComponent(name)}.mp4`;
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const colorsData: Color[] = colors as Color[];
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // NEW: separate "active" (keeps scale up) vs "playing" (mask expanded / 9:16)
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // cache HEAD checks so we don’t re-request
+  const videoCache = useRef<Map<string, boolean>>(new Map());
+
+  // per-card refs
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const tileRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // HEAD check by color.name
+  const headCheck = async (name: string) => {
+    const path = videoPathFromName(name);
+    if (videoCache.current.has(path)) return videoCache.current.get(path);
+    try {
+      const res = await fetch(path, { method: "HEAD" });
+      const ok = res.ok;
+      videoCache.current.set(path, ok);
+      return ok;
+    } catch {
+      videoCache.current.set(path, false);
+      return false;
+    }
+  };
+
+  // Collapse mask, hide video, show text again (keeps card scaled if active)
+  const hideAndReset = async (id: string) => {
+    const videoEl = videoRefs.current[id];
+    if (!videoEl) return;
+
+    // collapse the circular mask to reveal the color swatch underneath
+    await gsap.to(videoEl, {
+      duration: 0.45,
+      ease: "power3.inOut",
+      "--r": "0%" as any,
+    });
+
+    videoEl.pause();
+    videoEl.currentTime = 0;
+    videoEl.onended = null;
+    gsap.set(videoEl, { visibility: "hidden" as any });
+
+    // switch media area back to square by clearing "playing"
+    setPlayingId((p) => (p === id ? null : p));
+  };
+
+  // Run the “reveal” animation + play video for a color
+  const revealAndPlay = async (c: Color) => {
+    const id = c.jsonId;
+    const videoEl = videoRefs.current[id];
+    if (!videoEl) return;
+
+    const exists = await headCheck(c.name);
+    // Always set active (scale up), even if no video.
+    setActiveId(id);
+
+    if (!exists) return; // nothing else if no video file
+
+    // prepare video
+    videoEl.src = videoPathFromName(c.name);
+    videoEl.currentTime = 0;
+    videoEl.muted = false; // user click should allow with sound
+    videoEl.playsInline = true;
+
+    // show the video with mask collapsed and mark as "playing" (9:16 area)
+    gsap.set(videoEl, { visibility: "visible" as any, "--r": "0%" as any });
+    setPlayingId(id);
+
+    // Expand mask (reveal video)
+    await gsap.to(videoEl, {
+      duration: 0.55,
+      ease: "power3.inOut",
+      "--r": "140%" as any, // circle(var(--r) at 50% 50%)
+    });
+
+    try {
+      await videoEl.play();
+    } catch {
+      // autoplay blocked or issue: gracefully reset
+      await hideAndReset(id);
+      return;
+    }
+
+    // On finish: collapse mask → square aspect → show name/code; keep scale via activeId
+    videoEl.onended = () => {
+      hideAndReset(id);
+    };
+  };
+
+  // Click handler that also resets any previously active/playing card first
+  const handleSelect = async (color: Color) => {
+    if (activeId && activeId !== color.jsonId) {
+      await hideAndReset(activeId); // ensure previous is reset if switching selections
+    }
+    await revealAndPlay(color);
+  };
+
+  return (
+    <main className="flex flex-col gap-4">
+      <div className="max-w-screen-2xl mx-auto w-full px-2">
+        <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(125px,_1fr))]">
+          {colorsData.map((color) => {
+            const isActive = activeId === color.jsonId;
+            const isPlaying = playingId === color.jsonId;
+
+            return (
+              <div
+                key={color.jsonId}
+                ref={(el) => {
+                  tileRefs.current[color.jsonId] = el;
+                }}
+                className={[
+                  "bg-white rounded-sm w-full flex flex-col justify-between relative",
+                  "transition-all duration-300 ease-out transform",
+                  isActive && isPlaying
+                    ? "scale-200 shadow-2xl z-10 aspect-[9/16]"
+                    : isActive && !isPlaying
+                    ? "scale-200 shadow-xl aspect-[9/16] p-2 z-10"
+                    : "shadow-xl hover:shadow-2xl p-2"
+                ].join(" ")}
+              >
+                <div className="w-full flex justify-end">
+                  <img
+                    src="/Logo.png"
+                    alt="Boysen"
+                    aria-hidden={!(isActive && !isPlaying)}
+                    className={[
+                      "w-12 transition-opacity duration-300",
+                      isActive && !isPlaying
+                        ? "opacity-100"
+                        : "opacity-0 absolute",
+                    ].join(" ")}
+                  />
+                </div>
+                <div className="w-full">
+                  {/* MEDIA AREA */}
+                  <div
+                    className={[
+                      "relative rounded-sm overflow-hidden transition-all",
+                      isPlaying ? "aspect-[9/16]" : "aspect-square",
+                    ].join(" ")}
+                  >
+                    {/* COLOR SWATCH layer (always present beneath the video) */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="absolute inset-0 rounded-sm cursor-pointer outline-none"
+                      style={{
+                        backgroundColor: `rgb(${color.red}, ${color.green}, ${color.blue})`,
+                      }}
+                      onClick={() => handleSelect(color)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ")
+                          handleSelect(color);
+                      }}
+                    />
+
+                    {/* VIDEO masked by animating CSS var --r */}
+                    <video
+                      ref={(el) => {
+                        videoRefs.current[color.jsonId] = el;
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover rounded-sm"
+                      style={{
+                        visibility: "hidden",
+                        clipPath: "circle(var(--r, 0%) at 50% 50%)",
+                        WebkitClipPath: "circle(var(--r, 0%) at 50% 50%)",
+                        ["--r" as any]: "0%",
+                      }}
+                      onClick={() => {
+                        if (isPlaying && isActive){ hideAndReset(color.jsonId)}
+                      }}
+                    />
+                  </div>
+                </div>
+                {/* META (hide while playing; visible when ended; stays while scaled) */}
+                <div
+                  className={`py-2 transition-opacity bottom-0 ${
+                    isPlaying ? "hidden opacity-0 absolute" : "opacity-100"
+                  }`}
+                >
+                  <p className="font-bold leading-4">{color.name}</p>
+                  <p className="text-sm text-black/70">{color.code}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
