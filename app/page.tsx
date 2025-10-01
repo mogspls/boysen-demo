@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import colors from "@/lib/data.json";
 import gsap from "gsap";
 
@@ -117,6 +117,37 @@ export default function Home() {
     }
     await revealAndPlay(color);
   };
+
+  useEffect(() => {
+    const onPointerDown = async (e: PointerEvent) => {
+      if (!activeId) return;
+      if (!(e.target instanceof Element)) return;
+
+      const activeEl = tileRefs.current[activeId];
+
+      // If clicking inside the active card, ignore
+      if (activeEl && activeEl.contains(e.target)) return;
+
+      // If clicking another card, let that card's onClick handle switching
+      const clickedCard = e.target.closest("[data-card-id]");
+      if (clickedCard) return;
+
+      // Otherwise: truly outside → close
+      const id = activeId; // snapshot
+      if (playingId === id) {
+        await hideAndReset(id);
+      }
+      setPlayingId((p) => (p === id ? null : p));
+      setActiveId(null);
+    };
+
+    // Use pointerdown so it fires before onClick on some elements
+    document.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, {
+        capture: true,
+      } as any);
+  }, [activeId, playingId, hideAndReset, tileRefs]);
 
   return (
     <main className="flex flex-col gap-4">
