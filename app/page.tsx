@@ -8,8 +8,8 @@ export default function Home() {
 
   return (
     <main className="flex flex-col gap-4">
-      <div className="max-w-screen-2xl mx-auto w-full px-2">
-        <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(175px,_1fr))]">
+      <div className="max-w-screen-2xl mx-auto w-full px-1">
+        <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(175px,_1fr))] mt-24">
           {colorsData.map((color, index) => (
             <div key={index}>
               <ColorCard
