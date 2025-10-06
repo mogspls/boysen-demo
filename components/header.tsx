@@ -12,7 +12,7 @@ export default function Header() {
 			<div className="max-w-screen-2xl mx-auto w-full py-4">
 				<div className="font-semibold inline-flex gap-2 text-4xl items-center" style={{ fontFamily: "Helvetica, sans-serif"}}>
 					<div>
-						<img src="/boysenlogo%201.png" alt="BOYSEN®️" className="w-full max-w-sm"/>
+						<img src="/boysenlogo.png" alt="BOYSEN®️" className="w-full max-w-sm"/>
 					</div>
 					<h1>Color Stories</h1>
 				</div>
