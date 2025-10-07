@@ -20,15 +20,6 @@ export default function Home() {
             <ColorCard
               key={index}
               {...color}
-              // Optional: wire callbacks for later (GSAP/video/story)
-              onPlayRequested={(c) => {
-                // TODO: your GSAP reveal; set video.src when needed
-                console.log("play video for", c.name);
-              }}
-              onStoryRequested={(c) => {
-                // TODO: open your story form modal/drawer
-                console.log("open story view for", c.name);
-              }}
               imageurl={color.imageurl}
             />
           ))}

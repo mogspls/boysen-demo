@@ -1,6 +1,7 @@
 "use client";
 import { Color } from "@/types";
-import { useState, useRef, useEffect, use } from "react";
+import { Trash2, Upload } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,8 +11,15 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { on } from "events";
-import { get } from "http";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const SCALE = 1.5;
 
@@ -21,9 +29,9 @@ export const videoPathFromName = (name: string) =>
 type Props = Color & {
   hasVideo?: boolean;
   loading?: boolean;
-  onPlayRequested?: () => void;
-  onStoryRequested?: () => void;
-  onUploadRequested?: () => void;
+  onPlayRequested?: (color: Color) => void;
+  onStoryRequested?: (color: Color) => void;
+  onUploadRequested?: (color: Color) => void;
   imageurl?: string;
   key?: number | string;
 };
@@ -112,6 +120,11 @@ export default function ColorCard({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [shift, setShift] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Upload States
+  const [file, setFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Modal
   const [open, setOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<"video" | "story">("story");
@@ -129,13 +142,17 @@ export default function ColorCard({
     if (hasVideo) {
       setModalMode("video");
       setOpen(true);
+      onPlayRequested?.(baseColorPayload());
+      console.log("VIDEO");
     } else {
       setModalMode("story");
       setOpen(true);
+      onStoryRequested?.(baseColorPayload());
+      console.log("STORY");
     }
   };
 
-  const handleStoryAction = (kind: "write" | "upload" | null) => {
+  const handleStoryAction = (kind: "write" | "upload") => {
     // pause video if currently playing before flipping
     if (videoRef.current) {
       try {
@@ -144,10 +161,9 @@ export default function ColorCard({
     }
     if (kind === "write") {
       setView("write");
-      console.log("Write story for", `"${name}"`);
     } else {
+      onUploadRequested?.(baseColorPayload());
       setView("upload");
-      console.log("Upload story for", `"${name}"`);
     }
   };
 
@@ -160,6 +176,43 @@ export default function ColorCard({
 
   const textColor = getTextColor(red, green, blue);
   const contrastBG = getContrastBG(red, green, blue);
+
+  function openFileDialog() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) setFile(f);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragActive) setDragActive(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragActive) setDragActive(false);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) setFile(f);
+  }
+
+  function formatBytes(bytes: number) {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  }
 
   return (
     <>
@@ -303,6 +356,7 @@ export default function ColorCard({
         open={open}
         onOpenChange={(o) => {
           setOpen(o);
+          setView(null);
         }}
       >
         <DialogContent
@@ -342,6 +396,278 @@ export default function ColorCard({
                   <source src={videoPathFromName(name)} type="video/mp4" />
                 </video>
               </div>
+            </div>
+          ) : view === "write" ? (
+            <div
+              className={`h-full pt-6 pb-6 px-6 transition-all rounded-2xl outline-0 ${
+                view === "write" ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ background: `rgb(${red}, ${green}, ${blue})` }}
+            >
+              <header className="flex justify-between items-center">
+                <div>
+                  <Button
+                    onClick={() => setView(null)}
+                    variant="link"
+                    className="cursor-pointer"
+                  >
+                    <svg
+                      width="15"
+                      height="12"
+                      viewBox="0 0 15 12"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15 5.99853C15 5.41002 14.5139 4.93508 13.9117 4.93508L3.71429 4.93508L6.90704 1.81535C7.12102 1.60626 7.22589 1.33623 7.22589 1.06346C7.22589 0.790682 7.12103 0.517872 6.90704 0.311563C6.4819 -0.103854 5.7932 -0.103854 5.36947 0.311563L0.318856 5.24667C-0.106286 5.66209 -0.106286 6.33504 0.318856 6.74907L5.36947 11.6884C5.79461 12.1039 6.48331 12.1039 6.90704 11.6884C7.33218 11.273 7.33218 10.6001 6.90704 10.186L3.71429 7.0663L13.9117 7.0663C14.5139 7.06215 15 6.587 15 5.99853Z"
+                        fill={textColor}
+                      />
+                    </svg>
+                  </Button>
+                </div>
+                <div>
+                  <Button
+                    onClick={() => {
+                      setView(null);
+                      setOpen(false);
+                    }}
+                    variant="default"
+                    className={`text-[${textColor}] text-3xl bg-transparent hover:bg-unset py-0 px-2 cursor-pointer`}
+                  >
+                    &times;
+                  </Button>
+                </div>
+              </header>
+              <section>
+                <div className="w-full">
+                  <textarea
+                    className={`p-4 text-xl font-medium text-[${textColor}] placeholder:text-xl placeholder:text-[${textColor}]/50 resize-none w-full outline-0 min-h-[300px] max-h-[500px] h-full`}
+                    placeholder={`What's the story behind ${name}?`}
+                  ></textarea>
+                </div>
+                <div className="bg-black/50 rounded-sm p-2 text-white/75 flex justify-between gap-2">
+                  <div className="w-full px-2">
+                    <input
+                      type="text"
+                      id="username"
+                      placeholder="Add your @username (optional)"
+                      className="w-full outline-0 flex-1 h-full"
+                    />
+                  </div>
+                  <div className="text-black bg-white p-2 font-medium rounded-sm">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>Tiktok</DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuLabel>Tiktok</DropdownMenuLabel>
+                        <DropdownMenuItem>Instagram</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <div className="text-center pt-4">
+                  <Button
+                    className={`duration-75 text-lg px-12 py-6 rounded-full bg-transparent cursor-pointer border-1 border-[${textColor}] [&>svg]:fill-[${textColor}] text-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}] hover:[&>svg]:fill-[${contrastBG}]`}
+                    variant="outline"
+                    onClick={() => {
+                      toast.success("You have submitted your entry");
+                      setView(null);
+                      setOpen(false);
+                    }}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              </section>
+            </div>
+          ) : view === "upload" ? (
+            <div
+              className={`h-full pt-6 pb-6 px-6 transition-all rounded-2xl outline-0 ${
+                view === "upload" ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ background: `rgb(${red}, ${green}, ${blue})` }}
+            >
+              <header className="flex justify-between items-center">
+                <div>
+                  <Button
+                    onClick={() => setView(null)}
+                    variant="link"
+                    className="cursor-pointer"
+                  >
+                    <svg
+                      width="15"
+                      height="12"
+                      viewBox="0 0 15 12"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15 5.99853C15 5.41002 14.5139 4.93508 13.9117 4.93508L3.71429 4.93508L6.90704 1.81535C7.12102 1.60626 7.22589 1.33623 7.22589 1.06346C7.22589 0.790682 7.12103 0.517872 6.90704 0.311563C6.4819 -0.103854 5.7932 -0.103854 5.36947 0.311563L0.318856 5.24667C-0.106286 5.66209 -0.106286 6.33504 0.318856 6.74907L5.36947 11.6884C5.79461 12.1039 6.48331 12.1039 6.90704 11.6884C7.33218 11.273 7.33218 10.6001 6.90704 10.186L3.71429 7.0663L13.9117 7.0663C14.5139 7.06215 15 6.587 15 5.99853Z"
+                        fill={textColor}
+                      />
+                    </svg>
+                  </Button>
+                </div>
+                <div>
+                  <Button
+                    onClick={() => {
+                      setView(null);
+                      setOpen(false);
+                    }}
+                    variant="default"
+                    className={`text-[${textColor}] text-3xl bg-transparent hover:bg-unset py-0 px-2 cursor-pointer`}
+                  >
+                    &times;
+                  </Button>
+                </div>
+              </header>
+              <section className="p-2">
+                {!file ? (
+                  // EMPTY STATE: Drag & Drop / Choose File
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={openFileDialog}
+                    onKeyDown={(e) =>
+                      (e.key === "Enter" || e.key === " ") && openFileDialog()
+                    }
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={[
+                      "w-full rounded-lg border-2 border-dashed transition-all",
+                      "bg-black/30 hover:bg-black/40",
+                      dragActive ? "border-white/90" : "border-white/50",
+                      "outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+                      "p-6 sm:p-8 flex items-center justify-center text-center cursor-pointer select-none",
+                    ].join(" ")}
+                    aria-label="Upload a file by dragging here or choosing a file"
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      {/* Your provided square outline icon */}
+                      <svg
+                        width="48"
+                        height="48"
+                        viewBox="0 0 28 28"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="opacity-90"
+                      >
+                        <path
+                          d="M10.25 26.5H17.75C24 26.5 26.5 24 26.5 17.75V10.25C26.5 4 24 1.5 17.75 1.5H10.25C4 1.5 1.5 4 1.5 10.25V17.75C1.5 24 4 26.5 10.25 26.5Z"
+                          stroke="white"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+
+                      <p
+                        className={`font-medium text-[${textColor}]/90 leading-relaxed`}
+                      >
+                        Drag and drop file here or{" "}
+                        <span className="underline underline-offset-2">
+                          Choose File
+                        </span>
+                      </p>
+
+                      <p className={`text-[${textColor}]/60 text-xs`}>
+                        Supported: images / videos / documents (max ~100MB)
+                      </p>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={`mt-2 inline-flex items-center gap-2 border-1 bg-transparent text-[${textColor}] border-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}]`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openFileDialog();
+                        }}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Choose File
+                      </Button>
+                    </div>
+
+                    {/* Hidden native input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      // tweak accept as needed:
+                      accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx"
+                    />
+                  </div>
+                ) : (
+                  // SELECTED STATE: compact file row with remove button
+                  <div className="flex flex-col items-center w-full p-3 sm:p-4 bg-black/50 rounded-md justify-between gap-3">
+                    <div className="flex justify-between w-full">
+                      <div className="flex items-center gap-3 min-w-0 w-full">
+                        <div className="shrink-0">
+                          <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-white/80" />
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div
+                            className={`truncate font-medium text-[${textColor}]`}
+                          >
+                            {file.name}
+                          </div>
+                          <div className={`text-xs text-[${textColor}]/70`}>
+                            {file.type || "Unknown type"} •{" "}
+                            {formatBytes(file.size)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`border-1 bg-transparent text-[${textColor}] border-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}]`}
+                          onClick={() => setFile(null)}
+                          aria-label="Remove file"
+                          title="Remove file"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="bg-black/50 w-full rounded-sm p-2 text-white/75 flex justify-between gap-2">
+                      <div className="w-full px-2">
+                        <input
+                          type="text"
+                          id="username"
+                          placeholder="Add your @username (optional)"
+                          className="w-full outline-0 flex-1 h-full"
+                        />
+                      </div>
+                      <div className="text-black bg-white p-2 font-medium rounded-sm">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>Tiktok</DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuLabel>Tiktok</DropdownMenuLabel>
+                            <DropdownMenuItem>Instagram</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    <div className="text-center pt-4">
+                      <Button
+                        className={`duration-75 text-lg px-12 py-6 rounded-full bg-transparent cursor-pointer border-1 border-[${textColor}] [&>svg]:fill-[${textColor}] text-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}] hover:[&>svg]:fill-[${contrastBG}]`}
+                        variant="outline"
+                        onClick={() => {
+                          toast.success("You have submitted your entry");
+                          setView(null);
+                          setOpen(false);
+                        }}
+                      >
+                        Submit
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           ) : (
             <div
