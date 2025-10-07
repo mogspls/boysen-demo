@@ -533,8 +533,10 @@ export default function ColorCard({
                     onDrop={handleDrop}
                     className={[
                       "w-full rounded-lg border-2 border-dashed transition-all",
-                      "bg-black/30 hover:bg-black/40",
-                      dragActive ? "border-white/90" : "border-white/50",
+                      `border-[${textColor}] hover:bg-black/10`,
+                      dragActive
+                        ? `border-[${textColor}]/90`
+                        : `border-${textColor}/50`,
                       "outline-none focus-visible:ring-2 focus-visible:ring-white/70",
                       "p-6 sm:p-8 flex items-center justify-center text-center cursor-pointer select-none",
                     ].join(" ")}
@@ -543,16 +545,29 @@ export default function ColorCard({
                     <div className="flex flex-col items-center gap-3">
                       {/* Your provided square outline icon */}
                       <svg
-                        width="48"
-                        height="48"
-                        viewBox="0 0 28 28"
+                        width="30"
+                        height="30"
+                        viewBox="0 0 30 30"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="opacity-90"
                       >
                         <path
-                          d="M10.25 26.5H17.75C24 26.5 26.5 24 26.5 17.75V10.25C26.5 4 24 1.5 17.75 1.5H10.25C4 1.5 1.5 4 1.5 10.25V17.75C1.5 24 4 26.5 10.25 26.5Z"
-                          stroke="white"
+                          d="M10 15H20"
+                          stroke={textColor}
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M15 20V10"
+                          stroke={textColor}
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M11.25 27.5H18.75C25 27.5 27.5 25 27.5 18.75V11.25C27.5 5 25 2.5 18.75 2.5H11.25C5 2.5 2.5 5 2.5 11.25V18.75C2.5 25 5 27.5 11.25 27.5Z"
+                          stroke={textColor}
                           strokeWidth="1.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -572,7 +587,7 @@ export default function ColorCard({
                         Supported: images / videos / documents (max ~100MB)
                       </p>
 
-                      <Button
+                      {/* <Button
                         type="button"
                         variant="outline"
                         className={`mt-2 inline-flex items-center gap-2 border-1 bg-transparent text-[${textColor}] border-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}]`}
@@ -583,7 +598,7 @@ export default function ColorCard({
                       >
                         <Upload className="h-4 w-4" />
                         Choose File
-                      </Button>
+                      </Button> */}
                     </div>
 
                     {/* Hidden native input */}
@@ -593,29 +608,24 @@ export default function ColorCard({
                       className="hidden"
                       onChange={handleFileSelect}
                       // tweak accept as needed:
-                      accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx"
+                      accept="video/*"
                     />
                   </div>
                 ) : (
                   // SELECTED STATE: compact file row with remove button
-                  <div className="flex flex-col items-center w-full p-3 sm:p-4 bg-black/50 rounded-md justify-between gap-3">
-                    <div className="flex justify-between w-full">
+                  <div className="flex flex-col items-center w-full py-4 rounded-md justify-between gap-3">
+                    <div className="flex justify-between w-full gap-2">
                       <div className="flex items-center gap-3 min-w-0 w-full">
-                        <div className="shrink-0">
+                        {/* <div className="shrink-0">
                           <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center">
                             <Upload className="w-5 h-5 text-white/80" />
                           </div>
-                        </div>
-                        <div className="min-w-0">
-                          <div
-                            className={`truncate font-medium text-[${textColor}]`}
-                          >
-                            {file.name}
-                          </div>
-                          <div className={`text-xs text-[${textColor}]/70`}>
-                            {file.type || "Unknown type"} •{" "}
-                            {formatBytes(file.size)}
-                          </div>
+                        </div> */}
+                        <div
+                          className={`border rounded-sm p-2 text-base items-center flex justify-between w-full font-medium px-2 text-[${textColor}] border-[${textColor}] bg-[${contrastBG}]/10`}
+                        >
+                          <div className="w-full">{file.name}</div>
+                          <div className="whitespace-nowrap">{formatBytes(file.size)}</div>
                         </div>
                       </div>
 
@@ -623,12 +633,12 @@ export default function ColorCard({
                         <Button
                           type="button"
                           variant="outline"
-                          className={`border-1 bg-transparent text-[${textColor}] border-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}]`}
+                          className={`cursor-pointer border-1 rounded-full bg-transparent text-[${textColor}] border-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}] p-0 m-0`}
                           onClick={() => setFile(null)}
                           aria-label="Remove file"
                           title="Remove file"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-12 w-12" />
                         </Button>
                       </div>
                     </div>
