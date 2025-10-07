@@ -1,6 +1,6 @@
 "use client";
 import { Color } from "@/types";
-import { Trash2, Upload } from "lucide-react";
+import { ChevronDown, Trash2, Upload } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +11,21 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuLabel,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 const SCALE = 1.5;
@@ -384,7 +391,7 @@ export default function ColorCard({
               <div className="relative w-full overflow-hidden">
                 <video
                   ref={videoRef}
-                  className="w-full h-auto aspect-[9/16] object-bottom"
+                  className="w-full h-auto aspect-[9/16] object-bottom rounded-2xl outline-0"
                   playsInline
                   autoPlay
                   onClick={(e) => {
@@ -453,14 +460,22 @@ export default function ColorCard({
                       className="w-full outline-0 flex-1 h-full"
                     />
                   </div>
-                  <div className="text-black bg-white p-2 font-medium rounded-sm">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>Tiktok</DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuLabel>Tiktok</DropdownMenuLabel>
-                        <DropdownMenuItem>Instagram</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div
+                    className={`text-[${contrastBG}] bg-[${textColor}] font-medium rounded-sm`}
+                  >
+                    <Select defaultValue={"tiktok"}>
+                      <SelectTrigger
+                        className={`min-w-[100px] text-[${contrastBG}] cursor-pointer border-none`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tiktok" defaultChecked>
+                          Tiktok
+                        </SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="text-center pt-4">
@@ -538,7 +553,7 @@ export default function ColorCard({
                         ? `border-[${textColor}]/90`
                         : `border-${textColor}/50`,
                       "outline-none focus-visible:ring-2 focus-visible:ring-white/70",
-                      "p-6 sm:p-8 flex items-center justify-center text-center cursor-pointer select-none",
+                      "p-6 sm:p-8 sm:py-18 flex items-center justify-center text-center cursor-pointer select-none",
                     ].join(" ")}
                     aria-label="Upload a file by dragging here or choosing a file"
                   >
@@ -575,7 +590,7 @@ export default function ColorCard({
                       </svg>
 
                       <p
-                        className={`font-medium text-[${textColor}]/90 leading-relaxed`}
+                        className={`font-medium text-[${textColor}] leading-relaxed`}
                       >
                         Drag and drop file here or{" "}
                         <span className="underline underline-offset-2">
@@ -583,9 +598,9 @@ export default function ColorCard({
                         </span>
                       </p>
 
-                      <p className={`text-[${textColor}]/60 text-xs`}>
+                      {/* <p className={`text-[${textColor}]/60 text-xs`}>
                         Supported: images / videos / documents (max ~100MB)
-                      </p>
+                      </p> */}
 
                       {/* <Button
                         type="button"
@@ -625,7 +640,9 @@ export default function ColorCard({
                           className={`border rounded-sm p-2 text-base items-center flex justify-between w-full font-medium px-2 text-[${textColor}] border-[${textColor}] bg-[${contrastBG}]/10`}
                         >
                           <div className="w-full">{file.name}</div>
-                          <div className="whitespace-nowrap">{formatBytes(file.size)}</div>
+                          <div className="whitespace-nowrap">
+                            {formatBytes(file.size)}
+                          </div>
                         </div>
                       </div>
 
@@ -651,14 +668,22 @@ export default function ColorCard({
                           className="w-full outline-0 flex-1 h-full"
                         />
                       </div>
-                      <div className="text-black bg-white p-2 font-medium rounded-sm">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>Tiktok</DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuLabel>Tiktok</DropdownMenuLabel>
-                            <DropdownMenuItem>Instagram</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <div
+                        className={`text-[${contrastBG}] bg-[${textColor}] font-medium rounded-sm`}
+                      >
+                        <Select defaultValue={"tiktok"}>
+                          <SelectTrigger
+                            className={`min-w-[100px] text-[${contrastBG}] cursor-pointer border-none`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tiktok" defaultChecked>
+                              Tiktok
+                            </SelectItem>
+                            <SelectItem value="instagram">Instagram</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
@@ -667,7 +692,9 @@ export default function ColorCard({
                         className={`duration-75 text-lg px-12 py-6 rounded-full bg-transparent cursor-pointer border-1 border-[${textColor}] [&>svg]:fill-[${textColor}] text-[${textColor}] hover:bg-[${textColor}] hover:text-[${contrastBG}] hover:[&>svg]:fill-[${contrastBG}]`}
                         variant="outline"
                         onClick={() => {
-                          toast.success("You have submitted your entry");
+                          toast.success("Video has been submitted!", {
+                            description: "Your file has been submitted",
+                          });
                           setView(null);
                           setOpen(false);
                         }}
