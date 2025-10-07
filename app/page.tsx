@@ -1,5 +1,5 @@
 "use client";
-import ColorCard from "@/components/ColorCard";
+import ColorCard from "@/components/ColorCard-backup";
 import { Color } from "@/types";
 import colors from "@/lib/data.json";
 
@@ -8,25 +8,29 @@ export default function Home() {
 
   return (
     <main className="flex flex-col gap-4">
-      <div className="max-w-screen-2xl mx-auto w-full px-1">
-        <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(175px,_1fr))] mt-24">
+      <div className="max-w-screen-2xl mx-auto w-full px-2 md:px-6">
+        <div
+          className="grid gap-1 grid-cols-2
+          sm:gap-2 sm:grid-cols-3
+          lg:grid-cols-[repeat(auto-fit,minmax(175px,_1fr))] mt-24
+          "
+          data-pop-boundary
+        >
           {colorsData.map((color, index) => (
-            <div key={index}>
-              <ColorCard
-                key={color.jsonId}
-                {...color}
-                // Optional: wire callbacks for later (GSAP/video/story)
-                onPlayRequested={(c) => {
-                  // TODO: your GSAP reveal; set video.src when needed
-                  console.log("play video for", c.name);
-                }}
-                onStoryRequested={(c) => {
-                  // TODO: open your story form modal/drawer
-                  console.log("open story view for", c.name);
-                }}
-                imageurl={color.imageurl}
-              />
-            </div>
+            <ColorCard
+              key={index}
+              {...color}
+              // Optional: wire callbacks for later (GSAP/video/story)
+              onPlayRequested={(c) => {
+                // TODO: your GSAP reveal; set video.src when needed
+                console.log("play video for", c.name);
+              }}
+              onStoryRequested={(c) => {
+                // TODO: open your story form modal/drawer
+                console.log("open story view for", c.name);
+              }}
+              imageurl={color.imageurl}
+            />
           ))}
         </div>
       </div>
